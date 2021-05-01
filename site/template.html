@@ -9,20 +9,15 @@
     <!-- skewer mode integration, only for development! -->
     <!-- see https://github.com/skeeto/skewer-mode -->
     <script src="http://localhost:9876/skewer"></script>
+    <!-- for emacs (progn (defun test-this-file () (interactive) (save-current-buffer) (save-window-excursion (skewer-repl) (insert "window.location.reload(false);") (execute-kbd-macro (read-kbd-macro "RET")) (switch-to-buffer (current-buffer)))) (local-set-key (kbd "<f9>") 'test-this-file)) -->
+
   </head>
   <body>
     <h1>watch 36c3, incrementally</h1>
     <div id="after-title"></div>
-    <h2>High-assurance crypto software</h2>
-    <video src="./36C3_-_High-assurance_crypto_software-O07uRT-5BDM.ogv" controls=controls preload=auto autoplay=true></video>
-    <a href="./36C3_-_High-assurance_crypto_software-O07uRT-5BDM.ogv">36C3_-_High-assurance_crypto_software-O07uRT-5BDM.ogv</a>
-
-    <p>Source: <a href="https://media.ccc.de/v/36c3-10893-high-assurance_crypto_software">https://media.ccc.de/v/36c3-10893-high-assurance_crypto_software</a></p>
-    
-    <p>License: cc by 4.0: <a href="https://creativecommons.org/licenses/by/4.0/">https://creativecommons.org/licenses/by/4.0/</a></p>
-    
+    <!-- see entry.html for the content per stream -->
     {{{STREAMS}}}
 
-    <div id="footer">Created with gms</div>
+    <div id="footer">Created with <a href="gms.scm">gms</a> from <a href="template.html">template.html</a>, <a href="style.css">style.css</a>, <a href="video.html">video.html</a> and <a href="audio.html">audio.html</a>.</div>
   </body>
 </html>
