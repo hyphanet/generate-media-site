@@ -62,30 +62,6 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
                                                (list char-set:symbol char-set:punctuation char-set:iso-control char-set:blank))))))
    " "))
 
-(define levenshtein
-  (let ((cache '()))
-    (λ (s t)
-      (define key `(,s ,t))
-      (or (and=> (assoc key cache) cdr)
-          (let ((res
-                 (let lev ((s (string->list s))
-                           (sl (string-length s))
-                           (t (string->list t))
-                           (tl (string-length t)))
-                   (cond ((zero? sl) tl)
-                         ((zero? tl) sl)
-                         (else
-	                      (min (+ (lev (cdr s) (- sl 1) t tl) 1)
-                               (+ (lev s sl (cdr t) (- tl 1)) 1)
-                               (+ (lev (cdr s) (- sl 1) (cdr t) (- tl 1))
-		                          (if (char=? (car s) (car t)) 0 1))))))))
-            (set! cache (alist-cons key res cache))
-            res)))))
-
-(define (levenshtein-sort stream-files streamname)
-  (display 'stream-files) 
-  (write stream-files)
-    (newline)
 
 (define (convert-video filename)
   "Convert a video file to a freenet stream"
@@ -103,7 +79,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
     (inexact->exact
      (string->number (read-first-line (format #f "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 ~a" filename)))))
   (define (ffmpeg index start stop)
-    (when (and #false (< start duration-seconds)) ;; skip early when the video is finished.
+    (when (< start duration-seconds) ;; skip early when the video is finished.
       (close-pipe (open-input-pipe 
                    (format #f "ffmpeg -ss ~d -to ~d -accurate_seek -i ~a -y -g 360 -q:a 3 -q:v 3 -filter:v scale=640:-1 ~a-~3'0d.ogv"
                            start stop filename basename-without-extension index)))))
@@ -114,14 +90,11 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (when (not (equal? name filename))
     (close-pipe (open-input-pipe (format #f "mv ~a ~a" filename name))))
   ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream
-  (close-pipe (open-input-pipe (format #f "ls ~a-*ogv > ~a" basename-without-extension streamname)))
-  (let*  ((stream-files (read-all-lines "ls *-stream.m3u"))
-          (sorted (levenshtein-sort stream-files streamname)))
-    (map (λ (filename)(format #f "echo '~a' >> ~a" filename streamname)) sorted)
-    (list (cons 'filename filename)
-          (cons 'basename name)
-          (cons 'streamname streamname)
-          (cons 'title (basename->title basename-without-extension)))))
+  (close-pipe (open-input-pipe (format #f "(ls ~a-*ogv; ls *-stream.m3u | shuf) > ~a" basename-without-extension streamname)))
+  (list (cons 'filename filename)
+        (cons 'basename name)
+        (cons 'streamname streamname)
+        (cons 'title (basename->title basename-without-extension))))
 
 (define (add-video next-video)
   (define next-video-metadata (convert-video next-video))
