@@ -42,7 +42,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
     (while (not (eof-object? (peek-char port)))
       (set! res (cons (read-line port) res)))
     (close-pipe port)
-    (reverse (cdr res))))
+    (reverse res)))
 
 (define (read-file-as-string filename)
   (let* ((port (open-input-file filename))
@@ -111,6 +111,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (let* ((port (open-output-file (string-append "../entries/" (assoc-ref next-video-metadata 'basename)))))
     (display next-entry port)
     (close port))
+  (sync)
   (define template (read-file-as-string "template.html"))
   (define entry-filenames (map (λ (x) (string-append "../entries/" x)) (read-all-lines "ls --sort=time ../entries/")))
   (define entries (map read-file-as-string entry-filenames))
