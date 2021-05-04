@@ -12,6 +12,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 ;; - adjust style in template.html, video.html, audio.html, and style.css.
 ;; - put video and audio files into ../media/
 ;; - run ./gms.scm to grab a random file from ../media/ and create an index.html site with all the already converted audio ready for streaming.   
+;; - upload the folder containing gms.scm
 
 ;; Plan:
 ;; - unprocessed media-files are in ../media/
@@ -20,6 +21,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 ;; - new streams are inserted at the top.
 ;; - the content of all html files in ../entries is embedded in reverse temporal order (newest first).
 ;; - add older m3u's in random order to the current m3u so people can just watch all videos by letting the video play
+;; - get the source with history at http://hg.sr.ht/~arnebab/guile-media-site
 
 (define-module (gms) #:export (main))
 (import (ice-9 popen)
