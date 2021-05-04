@@ -6,9 +6,11 @@
     <meta name="keywords" content="Video, Stream">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="style.css" rel="stylesheet"></style>
+    <!-- inline streaming outside Freenet -->
+    <script src="m3u-player.js" defer="defer"></script>
     <!-- skewer mode integration, only for development! -->
     <!-- see https://github.com/skeeto/skewer-mode -->
-    <script src="http://localhost:9876/skewer"></script>
+    <script src="http://localhost:9876/skewer" defer="defer"></script>
     <!-- for emacs (progn (defun test-this-file () (interactive) (save-current-buffer) (save-window-excursion (skewer-repl) (insert "window.location.reload(false);") (execute-kbd-macro (read-kbd-macro "RET")) (switch-to-buffer (current-buffer)))) (local-set-key (kbd "<f9>") 'test-this-file)) -->
 
   </head>
