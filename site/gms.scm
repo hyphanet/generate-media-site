@@ -18,9 +18,8 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 ;; - processed entries are in ../entries as ~03d.html
 ;; - stream files are in $(basename filename).m3u and $(basename filename)-~03d.ogv to keep the structure simple.
 ;; - new streams are inserted at the top.
-;; - the currently processed video is in current-video/ so it can be resumed easily if conversion does not finish.
-;; - the content of all html files in ../entries is embedded in reverse lexical order.
-;; - keep the videos as full ogv encoded and add them shuffled to each m3u-list to give continuous random playback     of later entries.
+;; - the content of all html files in ../entries is embedded in reverse temporal order (newest first).
+;; - add older m3u's in random order to the current m3u so people can just watch all videos by letting the video play
 
 (define-module (gms) #:export (main))
 (import (ice-9 popen)
