@@ -22,7 +22,7 @@ h1 {
   height: 3.5em;
 }
 h1:before {
-  content: " ☺ ";
+  content: " ☺ ";
 }
 
 h2 {
@@ -43,7 +43,8 @@ body {
 #footer {
   margin-top: 2em;
   border-top: solid thin;
-  padding-top: 0.2em;
+  padding-top: 0.3em;
+  padding-bottom: 0.2em;
   color: gray;
   position: absolute;
   left: 0px;
