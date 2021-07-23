@@ -8,6 +8,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 ;; - Guile
 ;; - ffmpeg
 ;; - mplayer
+;; - Freenet for hosting: https://www.freenetproject.org
 
 ;; Usage:
 ;; - adjust style in template.html, video.html, audio.html, and style.css.
