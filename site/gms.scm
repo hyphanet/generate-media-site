@@ -79,8 +79,8 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define stop (+ start len))
   (define (step)
     (set! start (+ start len))
-    ;; compromise between linar increase for fast start and exponential increase for fewer breaks. 5 11 18 27 38 52 70 
-    (set! len (+ len 5 (inexact->exact (truncate (/ len 4)))))
+    ;; compromise between linar increase for fast start and exponential increase for fewer breaks. 5 7 10 15 22 30 40 51 64 79 97 118 142
+    (set! len (if (< len 11) (+ len (inexact->exact (truncate (/ len 2)))) (+ len 5 (inexact->exact (truncate (/ len 6))))))
     (set! stop (+ start len)))
   (define duration-seconds
     (inexact->exact
@@ -100,6 +100,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (close-pipe (open-input-pipe (format #f "(ls ~a-*ogv; ls *-stream.m3u | shuf) > ~a" basename-without-extension streamname)))
   (list (cons 'filename filename)
         (cons 'basename name)
+        (cons 'first-chunk (format #f "ls ~a-*ogv | head -n 1" basename-without-extension))
         (cons 'streamname streamname)
         (cons 'title (basename->title basename-without-extension))))
 
@@ -130,8 +131,10 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
      (string-replace-substring
       (string-replace-substring
        (string-replace-substring
-        entry-template "{{{TITLE}}}" (assoc-ref next-video-metadata 'title))
-       "{{{M3ULINK}}}" (assoc-ref next-video-metadata 'streamname))
+        (string-replace-substring
+         entry-template "{{{TITLE}}}" (assoc-ref next-video-metadata 'title))
+        "{{{M3ULINK}}}" (assoc-ref next-video-metadata 'streamname))
+       "{{{FIRSTCHUNK}}}" (assoc-ref next-video-metadata 'first-chunk))
       "{{{FILELINK}}}" (assoc-ref next-video-metadata 'basename))
      "{{{FILENAME}}}" (assoc-ref next-video-metadata 'basename)))
   (let* ((port (open-output-file (string-append "../entries/" (assoc-ref next-video-metadata 'basename)))))
@@ -145,7 +148,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 (define (create-site)
   (define template (read-file-as-string "template.html"))
-  (define entry-filenames (map (λ (x) (string-append "../entries/" x)) (read-all-lines "ls --sort=time ../entries/*.*")))
+  (define entry-filenames (map (λ (x) (string-append "../entries/" x)) (read-all-lines "ls --sort=time ../entries/")))
   (define entries (map read-file-as-string entry-filenames))
   (define replaced-first (string-replace-substring template "{{{STREAMS}}}" (string-join (take entries (min videos-on-first-page (length entries))) "\n\n")))
   (define replaced (string-replace-substring template "{{{STREAMS}}}" (string-join (drop entries (min videos-on-first-page (length entries))) "\n\n")))
