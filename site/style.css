@@ -1,0 +1,56 @@
+h1 {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  padding-left: 0em; /* to work well with width 100% */
+  padding-right: 0em;
+  background-color: #333;
+  color: white;
+  margin-top: 0px;
+  padding-top: 0.6em;
+  padding-bottom: 0.2em;
+  font-size: larger;
+}
+#after-title {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  z-index: -1;
+  background-color: #666;
+  width: 100%;
+  height: 3.5em;
+}
+h1:before {
+  content: " ☺ ";
+}
+
+h2 {
+  font-size: 36px;
+  font-family: serif;
+  margin-bottom: 1em;
+}
+
+video {
+  width: 720px;
+}
+
+body {
+  padding-top: 4em;
+  padding-left: 0.4em;
+}
+
+#footer {
+  margin-top: 2em;
+  border-top: solid thin;
+  padding-top: 0.3em;
+  padding-bottom: 0.2em;
+  color: gray;
+  position: absolute;
+  left: 0px;
+  padding-left: 0em;
+  width: 100%;
+}
+#footer:before {
+  content: " ";
+}
