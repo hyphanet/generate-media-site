@@ -39,7 +39,9 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 ;; - Guile
 ;; - ffmpeg
 ;; - mplayer
-;; - Freenet for hosting: https://www.freenetproject.org
+;; - xargs
+;; - grep
+;; - sed
 
 ;; Usage:
 ;; - adjust style in template.html, video.html, audio.html, and style.css.
@@ -74,7 +76,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
         (ice-9 format)
         (srfi srfi-1))
 
-(define videos-on-first-page 2)
+(define videos-on-first-page 1)
 (define maximum-video-count 10)
 
 (define-syntax-rule (read-first-line command)
@@ -122,13 +124,13 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define basename-without-extension (entry-basename filename))
   (define streamname (format-streamname basename-without-extension))
   (define start 0)
-  (define len 9) ;; about 550k, so two files fit into the manifest.
+  (define len 5) ;; less than 350k, so two files fit into the manifest and the first can be a fast SSK-splitfile (for access in following playlists).
   (define stop (+ start len))
   (define (step)
     (set! start (+ start len))
     ;; exponential increase with larger initial segment in manifest to minimize breaks.
-    ;;  9 11 13 16 20 25 31 38 47 58 72 90 112 140 175 218 272 340 425 531 663
-    (set! len (truncate (* len 5/4)))
+    ;;  5  8 11 15 20 26 33 41 51 63 77 94 114 138 167 202 244 294 354 426 513
+    (set! len (+ 2 (truncate (* len 6/5))))
     (set! stop (+ start len)))
   (define duration-seconds
     (inexact->exact
@@ -139,13 +141,13 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
                    (format #f "ffmpeg -threads 4 -ss ~d -to ~d -accurate_seek -i \"~a\" -y -g 360 -b:v 400k  -b:a 56k -filter:v scale=720:-1 \"~a-~3'0d.ogv\""
                            start stop filename basename-without-extension index)))))
   ;; convert the video in segments
-  (map (λ(x) (ffmpeg x start stop)(step)) (iota 999))
+  (map (λ (x) (ffmpeg x start stop)(step)) (iota 999))
   (close-pipe (open-input-pipe (format #f "mplayer \"~a\" -ss 5 -nosound -vf scale -zoom -xy 600 -vo jpeg:outdir=. -frames 1 && cp 00000001.jpg \"~a.jpg\"" filename basename-without-extension)))
   ;; move the file to the current directory if needed
   (when (not (equal? name filename))
 	(close-pipe (open-input-pipe (format #f "mv \"~a\" \"~a\"" filename name))))
-  ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream. Skip the first two: the first is shown on the index page, the second can fail because its first segment was in the manifest, so it will only be inserted one insert later.
-  (close-pipe (open-input-pipe (format #f "(ls \"~a\"-*ogv; ls --sort=time *-stream.m3u | grep -v \"~a\" | tail +3 | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 3) (display line)(newline)) (loop (read-line))))') > \"~a\"" basename-without-extension streamname streamname)))
+  ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream. Skip one more than the ones on the index page: the first in the archive can fail because its first segment was in the manifest, so it will only be inserted one insert later.
+  (close-pipe (open-input-pipe (format #f "(ls \"~a\"-*ogv; ls --sort=time *-stream.m3u | grep -v \"~a\" | tail +~a | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 3) (display line)(newline)) (loop (read-line))))') > \"~a\"" basename-without-extension streamname (+ 2 videos-on-first-page) streamname)))
   (entry-metadata filename))
 
 (define (entry-metadata filename)
@@ -219,7 +221,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
       (newline)
       (read-first-line cmd))
     ;; remove stream from other streams
-    (read-first-line (format #f "for i in *-stream.m3u; do grep -v \"~a\" \"$i\" > ../tmpstream.m3u; mv ../tmpstream.m3u \"$i\"; done" (format-streamname video-file)))
+    (read-first-line (format #f "ls --sort=time -r *-stream.m3u | xargs -I % bash -c 'grep -v \"~a\" \"%\" > ../tmpstream.m3u; mv ../tmpstream.m3u \"%\"'" (format-streamname video-file)))
     (read-first-line (format #f "rm '../entries/~a'" video-file))))
 
 (define (create-site)
