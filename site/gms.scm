@@ -128,7 +128,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define stop (+ start len))
   (define (step)
     (set! start (+ start len))
-    ;; exponential increase with larger initial segment in manifest to minimize breaks.
+    ;; exponential increase with small linear component in manifest to minimize breaks.
     ;;  5  8 11 15 20 26 33 41 51 63 77 94 114 138 167 202 244 294 354 426 513
     (set! len (+ 2 (truncate (* len 6/5))))
     (set! stop (+ start len)))
