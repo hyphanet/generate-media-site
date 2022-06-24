@@ -1,5 +1,5 @@
-Guile Media Site
-================
+Generate Media Site
+===================
 
 A generator for simple streaming media sites, optimized for insertion into Freenet.
 
