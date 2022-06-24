@@ -7,8 +7,9 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 ;; Copyright (C) 2021 ArneBab
 ;; Copyright (C) 2022 Morrow_Singh@sJr0A3bn8e-NHUYydXFSyDDio~43O7m5fDBZUQj4lQY
+;; Copyright (C) 2022 politup@Mr7SAf-PQu0...
 
-;; Author: ArneBab and Morrow Singh
+;; Author: ArneBab and Morrow Singh and politup
 
 ;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU Affero General Public License as
@@ -76,8 +77,11 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
         (ice-9 format)
         (srfi srfi-1))
 
+;; the number of videos shown on the index-page, having more than one often hurts starting in the first 
 (define videos-on-first-page 1)
 (define maximum-video-count 8)
+;; should the source file be transcoded to a more efficient format?
+(define transcode-the-source-file #f)
 
 (define-syntax-rule (read-first-line command)
   (let* ((port (open-input-pipe command))
@@ -145,7 +149,12 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (close-pipe (open-input-pipe (format #f "mplayer \"~a\" -ss 5 -nosound -vf scale -zoom -xy 600 -vo jpeg:outdir=. -frames 1 && cp 00000001.jpg \"~a.jpg\"" filename basename-without-extension)))
   ;; move the file to the current directory if needed
   (when (not (equal? name filename))
-	(close-pipe (open-input-pipe (format #f "mv \"~a\" \"~a\"" filename name))))
+    (cond
+     (transcode-the-source-file
+      (close-pipe (open-input-pipe (format #f "ffmpeg -threads 8 -i \"~a\" -y -c:v libvpx-vp9 -b:v 0 -crf 56 -aq-mode 2 -c:a libopus -b:a 24k -filter:v scale=720:-1 -tile-columns 0 -tile-rows 0 -frame-parallel 0 -cpu-used -8 -auto-alt-ref 1 -lag-in-frames 25 -g 999 \"~a\".webm" filename basename-without-extension)))
+      (close-pipe (open-input-pipe (format #f "rm \"~a\"" filename))))
+     (else 
+	  (close-pipe (open-input-pipe (format #f "mv \"~a\" \"~a\"" filename name))))))
   ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream. Skip one more than the ones on the index page: the first in the archive can fail because its first segment was in the manifest, so it will only be included one insert later.
   (close-pipe (open-input-pipe (format #f "(ls \"~a\"-*ogv; ls --sort=time *-stream.m3u | grep -v \"~a\" | tail +~a | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 4) (display line)(newline)) (loop (read-line))))') > \"~a\"" basename-without-extension streamname (+ 2 videos-on-first-page) streamname)))
   (entry-metadata filename))
@@ -156,7 +165,9 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define streamname (format-streamname basename-without-extension))
   (let ((first-three (read-all-lines (format #f "ls \"~a-\"*ogv | head -n 2" basename-without-extension))))
     (list (cons 'filename filename)
-          (cons 'basename name)
+          (cons 'basename (if transcode-the-source-file
+                              (string-append basename-without-extension ".webm")
+                              name))
           (cons 'first-chunk (first first-three))
           (cons 'second-chunk (second first-three))
           (cons 'streamname streamname)
