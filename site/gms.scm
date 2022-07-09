@@ -60,7 +60,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 ;;; remove the alternate m3u-lists
 ;; for i in *-stream.m3u; do grep -v .m3u "$i" > tmp && mv tmp "$i"; done; rm -f playlists; SAVEIFS=$IFS; IFS=$(echo -en "\n\b"); for i in $(ls --sort=time -r ../entries/); do touch "${i%%.*}"*; tac playlists | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 4) (display line)(newline)) (loop (read-line))))' >> "${i%%.*}"*-stream.m3u; echo "${i%%.*}"*-stream.m3u >> playlists; sleep 1; done; IFS=$SAVEIFS; rm -f playlists
 
-
+;; TODO: Refactor, so all playlist editing is done in specialized functions that are easier to understand.
 
 ;; Approach:
 ;; - stream files are in $(basename filename).m3u and $(basename filename)-~03d.ogv to keep the structure simple.
@@ -156,7 +156,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
      (else 
 	  (close-pipe (open-input-pipe (format #f "mv \"~a\" \"~a\"" filename name))))))
   ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream. Skip one more than the ones on the index page: the first in the archive can fail because its first segment was in the manifest, so it will only be included one insert later.
-  (close-pipe (open-input-pipe (format #f "(ls \"~a\"-*ogv; ls --sort=time *-stream.m3u | grep -v \"~a\" | tail +~a | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 4) (display line)(newline)) (loop (read-line))))') > \"~a\"" basename-without-extension streamname (+ 2 videos-on-first-page) streamname)))
+  (close-pipe (open-input-pipe (format #f "(ls \"~a\"-*ogv; ls --sort=time *-stream.m3u | grep -v \"~a\" | tail +~a | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 4) (display line)(newline)) (loop (read-line))))') > \"~a\"" basename-without-extension streamname (+ 1 videos-on-first-page) streamname)))
   (entry-metadata filename))
 
 (define (entry-metadata filename)
@@ -295,11 +295,11 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (format #t "~a [--help | --rebuild-only | --create-entry <video-filename>] [--recycle-removed]\n" (car args)))
 
 (define (main args)
-  (define next-video (read-first-line "ls ../media/*.* | shuf | head -n 1"))
   (define help? (member "--help" args))
   (define rebuild-only? (member "--rebuild-only" args))
   (define create-entry? (member "--create-entry" args))
   (define recycle-removed-media? (member "--recycle-removed" args))
+  (define next-video (if rebuild-only? #f (read-first-line "ls ../media/*.* | shuf | head -n 1")))
   (cond
    (help? (help args))
    (create-entry?
@@ -307,7 +307,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 	(help args)
 	(create-video-entry (entry-metadata (second create-entry?)))))
    ((not rebuild-only?)
-    (when (not (eof-object? next-video))
+    (when (and next-video (not (eof-object? next-video)))
       ;; remove old videos before adding the new; use plain
       ;; maximum-video-count, even though tail -n +N gets N-1 lines,
       ;; because a new file is added afterwards.
