@@ -242,7 +242,16 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 (define (add-video next-video)
   (define next-video-metadata (convert-video next-video))
+  (define (touch-and-wait filename)
+    (read-first-line (format #f "touch '~a'" filename))
+    (sleep 1))
   (create-video-entry next-video-metadata)
+  ;; append the third playlist as last entry to the second playlist to avoid having forced double-steps in the playlists.
+  (let ((playlists (read-all-lines (format #f "ls --sort=time -r *-stream.m3u"))))
+    (when (<= 3 (length playlists))
+      (read-first-line (format #f "echo '~a' >> '~a'" (third (playlists)) (second (playlists))))
+      ;; preserve the order by touching with sleep
+      (for-each touch-and-wait playlists)))
   (display next-video)
   (newline)
   (sync))
