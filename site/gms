@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 if [[ x"$1" == x"" ]]; then
-  echo missing argument: first argument is required. Arguments: "$@"
+  echo missing argument: first argument must be a link to a media file. Arguments: "$@"
   exit 1;
 fi
-cd "$(dirname "$(realpath "${0}")")/../media" && (torify \youtube-dl -o '%(title).50s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --embed-subs -f 18 $1 || torify \youtube-dl -o '%(title).100s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --embed-subs $1) && cd "$(dirname "$(realpath "${0}")")/../site" && ./gms.scm && freesitemgr update gms | grep -q 'still inserting from before' && sleep 7200 && freesitemgr update gms
+SITENAME=gms
+
+cd "$(dirname "$(realpath "${0}")")/../media" && (torify \youtube-dl -o '%(title).100s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --embed-subs -f 18 $1 || torify \youtube-dl -o '%(title).100s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --embed-subs $1) && cd "$(dirname "$(realpath "${0}")")/../site" && ./gms.scm && freesitemgr --max-manifest-size=1300 update "${SITENAME}" | grep -q 'still inserting from before' && sleep 7200 && freesitemgr --max-manifest-size=1300 update "${SITENAME}"
