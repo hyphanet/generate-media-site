@@ -247,11 +247,11 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
     (sleep 1))
   (create-video-entry next-video-metadata)
   ;; append the third playlist as last entry to the second playlist to avoid having forced double-steps in the playlists.
-  (let ((playlists (read-all-lines (format #f "ls --sort=time -r *-stream.m3u"))))
-    (when (<= 3 (length playlists))
-      (read-first-line (format #f "echo '~a' >> '~a'" (third playlists) (second playlists)))
-      ;; preserve the order by touching with sleep
-      (for-each touch-and-wait playlists)))
+  (let ((playlists-latest-first (read-all-lines (format #f "ls --sort=time *-stream.m3u"))))
+    (when (<= 3 (length playlists-latest-first))
+      (read-first-line (format #f "echo '~a' >> '~a'" (third playlists-latest-first) (second playlists-latest-first)))
+      ;; preserve the order by touching them in oldest-first order with sleep
+      (for-each touch-and-wait (reverse playlists-latest-first))))
   (display next-video)
   (newline)
   (sync))
