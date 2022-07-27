@@ -147,7 +147,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   ;; convert the video in segments
   (map (λ(x) (ffmpeg x start stop)(step)) (iota 999))
   (close-pipe (open-input-pipe (format #f "mplayer \"~a\" -ss 5 -nosound -vf scale -zoom -xy 600 -vo jpeg:outdir=. -frames 1 && cp 00000001.jpg \"~a.jpg\"" filename basename-without-extension)))
-  ;; move the file to the current directory if needed
+  ;; move or transcode the file to the current directory if needed
   (when (not (equal? name filename))
     (cond
      (transcode-the-source-file
@@ -261,7 +261,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
     ;; move video back into media
     (read-first-line (format #f "mv '~a' ../media/" video-file))))
 
-(define (remove-video video-file)
+(define (remove-video-streaming-files video-file)
   (when (not (string-null? video-file))
     ;; delete stream and content files
     (let ((cmd (format #f "rm '~a' \"~a-\"[0-9][0-9][0-9]\".ogv\"" (format-streamname video-file) (entry-basename video-file))))
@@ -315,7 +315,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
         ;; recycle before removing the old videos
         (when recycle-removed-media?
           (map recycle-video old-files))
-        (map remove-video old-files))
+        (map remove-video-streaming-files old-files))
       ;; create and add new video
 	  (add-video next-video))
     (create-site))
