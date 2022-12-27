@@ -1,8 +1,22 @@
 #!/usr/bin/env bash
+set -x
 if [[ x"$1" == x"" ]]; then
   echo missing argument: first argument must be a link to a media file. Arguments: "$@"
   exit 1;
 fi
+if [[ x"$1" == x"--help" ]]; then
+    echo $0 "[--help] URL INFO ..."
+    echo "example:"
+    echo $0 "http://infinite-hands.draketo.de/filme/Infinite_Hands-2008-Thusnelda-2009-09-18.ogv" "Free Software Filk Song by Arne Babenhauserheide"
+    echo
+    echo You can use arbitrary html in the INFO.
+fi
+# the name for your site in freesitemgr
 SITENAME=gms
 
-cd "$(dirname "$(realpath "${0}")")/../media" && (torify \youtube-dl -o '%(title).100s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --embed-subs -f 18 $1 || torify \youtube-dl -o '%(title).100s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --embed-subs $1) && cd "$(dirname "$(realpath "${0}")")/../site" && ./gms.scm && freesitemgr --max-manifest-size=1300 update "${SITENAME}" | grep -q 'still inserting from before' && sleep 7200 && freesitemgr --max-manifest-size=1300 update "${SITENAME}" | grep -q 'still inserting from before' && sleep 14400 && freesitemgr --max-manifest-size=1300 update "${SITENAME}"
+SCRIPT="$0"
+URL="$1"
+shift
+INFO="$@"
+
+cd "$(dirname "$(realpath "${SCRIPT}")")/../media" && (torify \youtube-dl -o '%(title).100s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --embed-subs -f 18 "$URL" || torify \youtube-dl -o '%(title).100s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --embed-subs "$URL") &&  torify \youtube-dl -o '%(title).100s-%(id)s.%(ext)s' -i --restrict-filenames --yes-playlist --get-filename "${URL}" | xargs -I % bash -c 'echo "'"${@}"'" >> '%'.info' && cd "$(dirname "$(realpath "${SCRIPT}")")/../site" && ./gms.scm && freesitemgr --max-manifest-size=1300 update "${SITENAME}" | grep -q 'still inserting from before' && sleep 7200 && freesitemgr --max-manifest-size=1300 update "${SITENAME}" | grep -q 'still inserting from before' && sleep 14400 && freesitemgr --max-manifest-size=1300 update "${SITENAME}";
