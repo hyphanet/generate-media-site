@@ -98,10 +98,12 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
     (reverse res)))
 
 (define (read-file-as-string filename)
-  (let* ((port (open-input-file filename))
-         (content (if (eof-object? (peek-char port)) "" (read-delimited "" port))))
-    (close port)
-    content))
+  (if (not (file-exists? filename))
+      ""
+      (let* ((port (open-input-file filename))
+             (content (if (eof-object? (peek-char port)) "" (read-delimited "" port))))
+        (close port)
+        content)))
 
 (define (filename-extension filename)
   (string-append "." (car (take-right (string-split filename #\.) 1))))
@@ -118,6 +120,9 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 (define (format-streamname filename)
   (format #f "~a-stream.m3u" (entry-basename filename)))
+
+(define (format-infoname filename)
+  (format #f "~a.info" filename))
 
 (define (entry-basename filename)
   (basename filename (filename-extension filename)))
@@ -149,6 +154,9 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (close-pipe (open-input-pipe (format #f "mplayer \"~a\" -ss 5 -nosound -vf scale -zoom -xy 600 -vo jpeg:outdir=. -frames 1 && cp 00000001.jpg \"~a.jpg\"" filename basename-without-extension)))
   ;; move or transcode the file to the current directory if needed
   (when (not (equal? name filename))
+    ;; info file, if available
+    (close-pipe (open-input-pipe (format #f "mv \"~a\".info \"~a\".info" filename name)))
+    ;; media file
     (cond
      (transcode-the-source-file
       (close-pipe (open-input-pipe (format #f "ffmpeg -threads 8 -i \"~a\" -y -c:v libvpx-vp9 -b:v 0 -crf 56 -aq-mode 2 -c:a libopus -b:a 24k -filter:v scale=720:-1 -tile-columns 0 -tile-rows 0 -frame-parallel 0 -cpu-used -8 -auto-alt-ref 1 -lag-in-frames 25 -g 999 \"~a\".webm" filename basename-without-extension)))
@@ -163,6 +171,9 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define name (basename filename))
   (define basename-without-extension (entry-basename filename))
   (define streamname (format-streamname basename-without-extension))
+  (define info (read-file-as-string (format-infoname filename)))
+  (when (equal? info "")
+    (set! info (read-file-as-string (basename (format-infoname name)))))
   (let ((first-three (read-all-lines (format #f "ls \"~a-\"*ogv | head -n 2" basename-without-extension))))
     (list (cons 'filename filename)
           (cons 'basename (if transcode-the-source-file
@@ -170,6 +181,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
                               name))
           (cons 'first-chunk (first first-three))
           (cons 'second-chunk (second first-three))
+          (cons 'info info)
           (cons 'streamname streamname)
           (cons 'title (basename->title basename-without-extension)))))
 
@@ -199,14 +211,16 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
      (string-replace-substring
       (string-replace-substring
        (string-replace-substring
-	(string-replace-substring
-	 (string-replace-substring
-	  entry-template "{{{TITLE}}}" (assoc-ref next-video-metadata 'title))
-	 "{{{M3ULINK}}}" (assoc-ref next-video-metadata 'streamname))
-	"{{{FIRSTCHUNK}}}" (assoc-ref next-video-metadata 'first-chunk))
-       "{{{SECONDCHUNK}}}" (assoc-ref next-video-metadata 'second-chunk))
-      "{{{FILELINK}}}" (assoc-ref next-video-metadata 'basename))
-     "{{{FILENAME}}}" (assoc-ref next-video-metadata 'basename)))
+	    (string-replace-substring
+	     (string-replace-substring
+	      (string-replace-substring
+	       entry-template "{{{TITLE}}}" (assoc-ref next-video-metadata 'title))
+	      "{{{M3ULINK}}}" (assoc-ref next-video-metadata 'streamname))
+	     "{{{FIRSTCHUNK}}}" (assoc-ref next-video-metadata 'first-chunk))
+        "{{{SECONDCHUNK}}}" (assoc-ref next-video-metadata 'second-chunk))
+       "{{{FILELINK}}}" (assoc-ref next-video-metadata 'basename))
+      "{{{FILENAME}}}" (assoc-ref next-video-metadata 'basename))
+     "{{{INFO}}}" (assoc-ref next-video-metadata 'info)))
   (let* ((port (open-output-file (string-append "../entries/" (assoc-ref next-video-metadata 'basename)))))
     (display next-entry port)
     (close port)))
@@ -226,14 +240,16 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
      (string-replace-substring
       (string-replace-substring
        (string-replace-substring
-	(string-replace-substring
-	 (string-replace-substring
-	  entry-template "{{{TITLE}}}" "Chronological Playlist (oldest first)")
-	 "{{{M3ULINK}}}" chronological-playlist)
-	"{{{FIRSTCHUNK}}}" chronological-playlist)
-       "{{{SECONDCHUNK}}}" chronological-playlist)
-      "{{{FILELINK}}}" chronological-playlist)
-     "{{{FILENAME}}}" chronological-playlist))
+	    (string-replace-substring
+	     (string-replace-substring
+	      (string-replace-substring
+	       entry-template "{{{TITLE}}}" "Chronological Playlist (oldest first)")
+	      "{{{M3ULINK}}}" chronological-playlist)
+	     "{{{FIRSTCHUNK}}}" chronological-playlist)
+        "{{{SECONDCHUNK}}}" chronological-playlist)
+       "{{{FILELINK}}}" chronological-playlist)
+      "{{{FILENAME}}}" chronological-playlist)
+    "{{{INFO}}}" ""))
   (define page
     (string-replace-substring template "{{{STREAMS}}}" next-entry))
   (let* ((port (open-output-file chronological-page)))
@@ -259,11 +275,11 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 (define (recycle-video video-file)
   (when (not (string-null? video-file))
     ;; move video back into media
-    (read-first-line (format #f "mv '~a' ../media/" video-file))))
+    (read-first-line (format #f "mv '~a' '~a'.info ../media/" video-file video-file))))
 
-(define (remove-video-streaming-files video-file)
+(define (remove-video video-file)
   (when (not (string-null? video-file))
-    ;; delete stream and content files
+    ;; delete stream and chunk files
     (let ((cmd (format #f "rm '~a' \"~a-\"[0-9][0-9][0-9]\".ogv\"" (format-streamname video-file) (entry-basename video-file))))
       (display cmd)
       (newline)
@@ -292,20 +308,23 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (newline))
 
 (define (help args)
-  (format #t "~a [--help | --rebuild-only | --create-entry <video-filename>] [--recycle-removed]\n" (car args)))
+  (format #t "~a [--help | --rebuild-only | --file <path-to-external-file> | --create-entry <video-filename>] [--recycle-removed]\n" (car args)))
 
 (define (main args)
   (define help? (member "--help" args))
   (define rebuild-only? (member "--rebuild-only" args))
+  (define file? (member "--file" args))
   (define create-entry? (member "--create-entry" args))
   (define recycle-removed-media? (member "--recycle-removed" args))
-  (define next-video (if rebuild-only? #f (read-first-line "ls ../media/*.* | shuf | head -n 1")))
+  (define next-video (cond (rebuild-only? #f)
+                           (file? (cadr file?))
+                           (else (read-first-line "ls ../media/*.* | grep -v '.info$' | shuf | head -n 1"))))
   (cond
    (help? (help args))
    (create-entry?
     (if (null? (cdr create-entry?))
-	(help args)
-	(create-video-entry (entry-metadata (second create-entry?)))))
+	    (help args)
+	    (create-video-entry (entry-metadata (second create-entry?)))))
    ((not rebuild-only?)
     (when (and next-video (not (eof-object? next-video)))
       ;; remove old videos before adding the new; use plain
@@ -315,7 +334,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
         ;; recycle before removing the old videos
         (when recycle-removed-media?
           (map recycle-video old-files))
-        (map remove-video-streaming-files old-files))
+        (map remove-video old-files))
       ;; create and add new video
 	  (add-video next-video))
     (create-site))
