@@ -18,7 +18,7 @@ Run on debian (example):
 
 Then use [jSite](https://github.com/Bombe/jSite) or `freesitemgr` from [pyFreenet](https://github.com/freenet/pyFreenet) to upload the site/ folder into Freenet.
 
-Insert on debian (example)
+Insert on debian (example):
 
     sudo apt install git python3 autoconf automake openjdk-17-jdk wget grep sed gnupg curl firefox-esr
     pip3 install --user pyFreenet3
@@ -31,3 +31,14 @@ Insert on debian (example)
     # get your site public key (the website address to give others)
     ~/.local/bin/freesitemgr list YOUR_SITENAME
 
+## Develop
+
+Make sure you set up a username:
+
+    hg config -el # set [ui]\nusername = 'someone <somewhere@else>'
+
+Release your changes for use in Freenet:
+
+    hg archive site/gms.zip
+    hg bundle --all site/gms.bundle
+    ~/.local/bin/freesitemgr update YOUR_SITENAME
