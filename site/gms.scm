@@ -163,8 +163,8 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
       (close-pipe (open-input-pipe (format #f "rm \"~a\"" filename))))
      (else 
 	  (close-pipe (open-input-pipe (format #f "mv \"~a\" \"~a\"" filename name))))))
-  ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream. Skip one more than the ones on the index page: the first in the archive can fail because its first segment was in the manifest, so it will only be included one insert later.
-  (close-pipe (open-input-pipe (format #f "(ls \"~a\"-*ogv; ls --sort=time *-stream.m3u | grep -v \"~a\" | tail +~a | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 4) (display line)(newline)) (loop (read-line))))') > \"~a\"" basename-without-extension streamname (+ 1 videos-on-first-page) streamname)))
+  ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream
+  (close-pipe (open-input-pipe (format #f "(ls \"~a\"-*ogv; ls --sort=time *-stream.m3u | grep -v \"~a\" | tail +~a | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 4) (display line)(newline)) (loop (read-line))))') > \"~a\"" basename-without-extension streamname videos-on-first-page streamname)))
   (entry-metadata filename))
 
 (define (entry-metadata filename)
@@ -258,16 +258,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 (define (add-video next-video)
   (define next-video-metadata (convert-video next-video))
-  (define (touch-and-wait filename)
-    (read-first-line (format #f "touch '~a'" filename))
-    (sleep 1))
   (create-video-entry next-video-metadata)
-  ;; append the third playlist as last entry to the second playlist to avoid having forced double-steps in the playlists.
-  (let ((playlists-latest-first (read-all-lines (format #f "ls --sort=time *-stream.m3u"))))
-    (when (<= 3 (length playlists-latest-first))
-      (read-first-line (format #f "echo '~a' >> '~a'" (third playlists-latest-first) (second playlists-latest-first)))
-      ;; preserve the order by touching them in oldest-first order with sleep
-      (for-each touch-and-wait (reverse playlists-latest-first))))
   (display next-video)
   (newline)
   (sync))
