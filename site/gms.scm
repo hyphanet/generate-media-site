@@ -79,7 +79,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 ;; the number of videos shown on the index-page, having more than one often hurts starting in the first 
 (define videos-on-first-page 1)
-(define maximum-video-count 8)
+(define maximum-video-count 24)
 ;; should the source file be transcoded to a more efficient format?
 (define transcode-the-source-file #f)
 
@@ -133,12 +133,12 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define basename-without-extension (entry-basename filename))
   (define streamname (format-streamname basename-without-extension))
   (define start 0)
-  (define len 9) ;; about 550k, so two files fit into the manifest.
+  (define len 8) ;; about 550k, so two files fit into the manifest.
   (define stop (+ start len))
   (define (step)
     (set! start (+ start len))
     ;; exponential increase with larger initial segment in manifest to minimize breaks.
-    ;;  9 11 13 16 20 25 31 38 47 58 72 90 112 140 175 218 272 340 425 531 663
+    ;; 8 9 10 12 14 16 19 22 26 31 37 44 52 62 74 88 105 126 151 181 217 260 312 374 448
     (set! len (truncate (* len 6/5)))
     (set! stop (+ start len)))
   (define duration-seconds
@@ -163,7 +163,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
       (close-pipe (open-input-pipe (format #f "rm \"~a\"" filename))))
      (else 
 	  (close-pipe (open-input-pipe (format #f "mv \"~a\" \"~a\"" filename name))))))
-  ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream
+  ;; create stream playlist that continues with random other playlists after finishing. This might benefit from heuristics like sorting later streams by similarity to the original stream. Skip one more than the ones on the index page
   (close-pipe (open-input-pipe (format #f "(ls \"~a\"-*ogv; ls --sort=time *-stream.m3u | grep -v \"~a\" | tail +~a | guile -c '(import (ice-9 rdelim))(set! *random-state* (random-state-from-platform))(let loop ((line (read-line))) (unless (eof-object? line) (when (< (random 5) 4) (display line)(newline)) (loop (read-line))))') > \"~a\"" basename-without-extension streamname videos-on-first-page streamname)))
   (entry-metadata filename))
 
@@ -258,7 +258,16 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 (define (add-video next-video)
   (define next-video-metadata (convert-video next-video))
+  (define (touch-and-wait filename)
+    (read-first-line (format #f "touch '~a'" filename))
+    (sleep 1))
   (create-video-entry next-video-metadata)
+  ;; append the third playlist as last entry to the second playlist to avoid having forced double-steps in the playlists.
+  (let ((playlists-latest-first (read-all-lines (format #f "ls --sort=time *-stream.m3u"))))
+    (when (<= 3 (length playlists-latest-first))
+      (read-first-line (format #f "echo '~a' >> '~a'" (third playlists-latest-first) (second playlists-latest-first)))
+      ;; preserve the order by touching them in oldest-first order with sleep
+      (for-each touch-and-wait (reverse playlists-latest-first))))
   (display next-video)
   (newline)
   (sync))
@@ -284,8 +293,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define entry-filenames (map (λ (x) (string-append "../entries/" x)) (read-all-lines (format #f "ls --sort=time ../entries/ | head -n ~a" maximum-video-count))))
   (define entries (map read-file-as-string entry-filenames))
   (define replaced-first (string-replace-substring template "{{{STREAMS}}}" (string-join (take entries (min videos-on-first-page (length entries))) "\n\n")))
-  ;; skip the first video in archive, because it will not work in sharesite yet (first segment was in manifest and needs to be re-uploaded the next step)
-  (define replaced (string-replace-substring template "{{{STREAMS}}}" (string-join (drop entries (min (+ 1 videos-on-first-page) (length entries))) "\n\n")))
+  (define replaced (string-replace-substring template "{{{STREAMS}}}" (string-join entries "\n\n")))
   (let* ((port (open-output-file "index.html")))
     (display replaced-first port)
     (close port))
@@ -299,7 +307,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (newline))
 
 (define (help args)
-  (format #t "~a [--help | --rebuild-only | --file <path-to-external-file> | --create-entry <video-filename>] [--recycle-removed]\n" (car args)))
+  (format #t "~a [--help | --rebuild-only | --file <path-to-external-file> | --create-entry <video-filename>] [--recycle-removed] [--sorted]\n" (car args)))
 
 (define (main args)
   (define help? (member "--help" args))
@@ -307,8 +315,10 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define file? (member "--file" args))
   (define create-entry? (member "--create-entry" args))
   (define recycle-removed-media? (member "--recycle-removed" args))
+  (define sorted? (member "--sorted" args))
   (define next-video (cond (rebuild-only? #f)
                            (file? (cadr file?))
+                           (sorted? (read-first-line "ls ../media/*.* | grep -v '.info$' | sort -g | head -n 1"))
                            (else (read-first-line "ls ../media/*.* | grep -v '.info$' | shuf | head -n 1"))))
   (cond
    (help? (help args))
