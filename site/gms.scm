@@ -147,7 +147,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
   (define (ffmpeg index start stop)
     (when (< start duration-seconds) ;; skip early when the video is finished.
       (close-pipe (open-input-pipe 
-                   (format #f "ffmpeg -threads 4 -ss ~d -to ~d -accurate_seek -i \"~a\" -y -g 360 -b:v 400k  -b:a 56k -filter:v scale=720:-1 \"~a-~3'0d.ogv\""
+                   (format #f "ffmpeg -threads 4 -ss ~d -to ~d -accurate_seek -i \"~a\" -y -g 360 -b:v 500k  -b:a 84k -filter:v scale=720:-1 \"~a-~3'0d.ogv\""
                            start stop filename basename-without-extension index)))))
   ;; convert the video in segments
   (map (λ(x) (ffmpeg x start stop)(step)) (iota 999))
