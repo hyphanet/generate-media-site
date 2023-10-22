@@ -21,7 +21,7 @@ Then use [jSite](https://github.com/Bombe/jSite) or `freesitemgr` from [pyFreene
 Insert on debian (example):
 
     sudo apt install git python3 autoconf automake openjdk-17-jdk wget grep sed gnupg curl firefox-esr
-    pip3 install --user pyFreenet3
+    pip3 install --user pyFreenet3 || pip install --user pyFreenet3
     git clone https://github.com/freenet/browser
     (cd browser && ./bootstrap.sh --prefix=$HOME/.local && make install)
     # install Freenet if needed

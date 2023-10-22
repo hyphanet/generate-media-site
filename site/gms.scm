@@ -28,7 +28,6 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 ;;; Code:
 
-
 ;; gms creates a video site. It selects random videos from ../media,
 ;; prepares them for video-on-demand, and creates an index.html and an
 ;; archive.html page with the videos. Each video is followed by random
