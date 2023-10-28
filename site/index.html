@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>generate media site</title>
+    <meta name="keywords" content="Video, Stream">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="style.css" rel="stylesheet"></style>
+    <!-- inline streaming outside Freenet -->
+    <script src="m3u-player.js" defer="defer"></script>
+    <!-- skewer mode integration, only for development! -->
+    <!-- see https://github.com/skeeto/skewer-mode -->
+    <!--<script src="http://localhost:9876/skewer" defer="defer"></script>-->
+    <!-- for emacs (progn (defun test-this-file () (interactive) (save-current-buffer) (save-window-excursion (skewer-repl) (insert "window.location.reload(false);") (execute-kbd-macro (read-kbd-macro "RET")) (switch-to-buffer (current-buffer)))) (local-set-key (kbd "<f9>") 'test-this-file)) -->
+
+  </head>
+  <body>
+    <h1>generate media site</h1>
+    <div id="after-title"></div>
+    <!-- see entry.html for the content per stream -->
+    
+
+    <div id="howto">To create your own site on Linux:
+      <ul>
+        <li>install pyFreenet3 via <code>pip3 install --user pyFreenet3</code>
+        <li>Download <a href="gms.zip">gms.zip</a> and extract it somewhere
+        <li>For requirements, see <a href="gms.scm">gms.scm</a>
+        <li>add <code>path/to/gms/site</code> to freesitemgr using <code>freesitemgr add</code> with the name <code>gms</code> (edit <code>path/to/site/gms</code> to change the name)
+        <li>Adjust the <code>/?newbookmark</code> link in template.html to point to your site’s USK
+        <li>Install <strong>tor</strong>, <strong>torify</strong>, and <strong>youtube-dl</strong></code>
+        <li>adjust <a href="attribution.html">attribution</a> if needed
+        <li>Run <strong>tor</strong>, then call <code>path/to/site/gms URL INFO ...</code> to add a video or audio. INFO is an optional comment to show below the video.
+      </ul>
+    </div>
+    
+    <div id="howto-hack">To improve gms:
+      <ul>
+        <li>Install <a href="https://www.mercurial-scm.org">Mercurial</a>
+        <li>Get <a href="gms.bundle">gms.bundle</a>
+        <li>Clone from the bundle: <code>hg clone gms.bundle gms</code>
+        <li>See <code>gms/README.md</code>
+      </ul>
+    </div>
+
+    <div id="footer">Created with <a href="gms.scm">gms</a> from <a href="template.html">template.html</a>, <a href="style.css">style.css</a>, <a href="video.html">video.html</a>, <a href="audio.html">audio.html</a> and <a href="activelink.png">activelink.png</a>. Latest in <a href="index.html">index</a>, older in the <a href="archive.html">archive</a>. <a href="chronological.html">Chronological</a> (<a href="chronological.m3u">playlist</a>). Required attribution for included media-files: <a href="attribution.html">attribution</a>. -- <a href="/?newbookmark=USK@rQnuHCVpf7BHcsZHBt911K3-iaELN1u1Vg0fzxDRq7k,I1vFYWONhGfECHr9XD-1lKxxstr64rF4dTykcMq9swY,AQACAAE/gms/1/&desc=Generate+Media+Site&hasAnActivelink=true">Bookmark me!</a></div>
+  </body>
+</html>
