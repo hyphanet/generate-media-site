@@ -78,7 +78,10 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
 
 ;; the number of videos shown on the index-page, having more than one often hurts starting in the first 
 (define videos-on-first-page 1)
+;; The maximum number of videos to track. When adding more, old videos are cycled out.
 (define maximum-video-count 24)
+;; The maximum length of a streaming segment (usually reached after about one hour of playtime)
+(define maximum-segment-length-seconds (* 20 60)) ;; 20 minutes => less than 100 MiB
 ;; should the source file be transcoded to a more efficient format?
 (define transcode-the-source-file #f)
 
@@ -138,7 +141,7 @@ exec -a "$0" guile -L $(realpath $(dirname $0)) -e '(gms)' -c '' "$@"
     (set! start (+ start len))
     ;; exponential increase with larger initial segment in manifest to minimize breaks.
     ;; 8 9 10 12 14 16 19 22 26 31 37 44 52 62 74 88 105 126 151 181 217 260 312 374 448
-    (set! len (truncate (* len 6/5)))
+    (set! len (min (truncate (* len 6/5)) maximum-segment-length-seconds))
     (set! stop (+ start len)))
   (define duration-seconds
     (inexact->exact
