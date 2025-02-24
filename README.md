@@ -32,8 +32,8 @@ Insert on debian (example):
     ~/.local/bin/freesitemgr list YOUR_SITENAME
 
 Add all missing info-files (text shown below the video):
-    cd media \
-    && for i in $(ls | grep -v .info$); do 
+
+    cd media && for i in $(ls | grep -v .info$); do 
         if ! test -e $i.info; then 
             echo $i > $i.info && nano $i.info; 
         fi
